@@ -54,7 +54,7 @@ class BorrowRecordRepository:
     ) -> tuple[list[BorrowRecord], int]:
         now = datetime.now(timezone.utc)
         qs = BorrowRecord.filter(
-            status=BorrowStatus.BORROWED,
+            status__in=[BorrowStatus.BORROWED, BorrowStatus.OVERDUE],
             due_date__lt=now,
         ).prefetch_related("book", "member")
         total = await qs.count()

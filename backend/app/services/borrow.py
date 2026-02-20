@@ -113,13 +113,6 @@ class BorrowService:
         size: int = 20,
     ) -> tuple[list[BorrowRecord], int]:
         records, total = await self._borrow.get_overdue(page=page, size=size)
-
-        # Mark newly-overdue records
-        for record in records:
-            if record.status != BorrowStatus.OVERDUE:
-                record.status = BorrowStatus.OVERDUE
-                await self._borrow.save(record)
-
         return records, total
 
     async def get_member_borrowed_books(self, member_id: int) -> list[BorrowRecord]:

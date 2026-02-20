@@ -142,6 +142,18 @@ export async function fetchBorrowers(params: {
   return res.json();
 }
 
+export async function fetchOverdue(params: {
+  page?: number;
+  size?: number;
+}): Promise<BorrowerListResponse> {
+  const sp = new URLSearchParams();
+  if (params.page) sp.set("page", String(params.page));
+  if (params.size) sp.set("size", String(params.size));
+  const res = await fetch(`${API_BASE}/borrow/overdue?${sp.toString()}`);
+  if (!res.ok) throw new Error("Failed to load overdue records");
+  return res.json();
+}
+
 export async function createMember(data: {
   name: string;
   email: string;

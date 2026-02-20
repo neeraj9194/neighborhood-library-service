@@ -13,6 +13,14 @@ A full-stack application for managing a neighborhood library's books, members, a
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine
+- Create in `.env` file at the project root (below is the sample provided below)
+```
+    POSTGRES_USER=library_user
+    POSTGRES_PASSWORD=library_pass
+    POSTGRES_DB=library_db
+    DATABASE_URL=postgres://library_user:library_pass@db:5432/library_db
+  ```
+---
 
 ### Steps
 
@@ -38,106 +46,6 @@ That's it! Once the containers are running:
 
 To stop: `Ctrl+C` then `docker compose down`
 To reset everything (including DB data): `docker compose down -v`
-
----
-
-## Requirements Coverage
-
-### Functional Requirements
-
-| # | Requirement | Implementation |
-|---|-------------|----------------|
-| 1 | **Track Books** (title, author, etc.) | `Book` model with title, author, ISBN, genre, publisher, copy counts |
-| 2 | **Track Members** (name, contact info, etc.) | `Member` model with name, email, phone, address, active status |
-| 3 | **Track Borrowing/Returning** (who, what, when) | `BorrowRecord` model with book FK, member FK, dates, status enum |
-| 4 | **Create/Update books and members** | Full CRUD endpoints for both (`POST`, `GET`, `PATCH`, `DELETE`) |
-| 5 | **Record when a member borrows a book** | `POST /api/v1/borrow/` with business rule validation |
-| 6 | **Record when a borrowed book is returned** | `POST /api/v1/borrow/{id}/return` updates status and restores copies |
-| 7 | **Query/list borrowed books** | Filter by member, book, status; dedicated `/borrow/member/{id}` endpoint |
-
-### Technical Requirements
-
-| Requirement | Details |
-|-------------|---------|
-| **Python server** | FastAPI with async/await, Uvicorn |
-| **REST API** | RESTful endpoints with proper HTTP methods and status codes |
-| **PostgreSQL** | PostgreSQL 16 via Docker, Tortoise ORM (asyncpg driver) |
-| **Database schema design** | 3 normalized tables with foreign keys and indexes |
-| **Documentation / README** | This file — setup, run, test, and API reference |
-| **Docker setup** | Single `docker compose up --build` starts everything |
-| **Minimal Frontend (React/Next.js)** | Next.js App Router with Dashboard, Books, and Members pages |
-
-### ✅ Optional / Bonus Features
-
-| Feature | Details |
-|---------|---------|
-| **Overdue book handling** | Due dates tracked, `GET /borrow/overdue` endpoint, auto-marks OVERDUE status |
-| **Error handling** | Custom `BorrowError` exceptions, HTTP 4xx responses with clear messages |
-| **Input validation** | Pydantic schemas with `Field(...)` constraints (min/max length, email, etc.) |
-| **Cannot borrow already-checked-out book** | Duplicate active borrow prevention per member+book pair |
-| **Inactive member cannot borrow** | Business rule enforced in `BorrowService` |
-| **Borrow limit per member** | Max 10 simultaneous borrows per member |
-| **Copy tracking** | `available_copies` auto-decremented/incremented on borrow/return |
-| **Paginated results** | All list endpoints support `page` and `size` query params |
-| **Search** | Books searchable by title/author; Members searchable by name/email |
-| **Seed data script** | `scripts/seed.py` populates sample books and members |
-| **Automated tests** | Unit tests (3 files) + Integration tests (3 files) using pytest |
-| **Stats dashboard** | `GET /api/v1/stats/` returns aggregate library metrics |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend | FastAPI + Uvicorn (async Python) |
-| ORM | Tortoise ORM (asyncpg) |
-| Database | PostgreSQL 16 |
-| Migrations | Aerich |
-| Frontend | Next.js 15 (App Router), React 19, TypeScript |
-| Containerization | Docker + Docker Compose |
-
----
-
-## Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
-
----
-
-## Quick Start
-
-### 1. Clone and navigate to the project
-
-```bash
-git clone <repository-url>
-cd neighborhood-library-service
-```
-
-### 2. Start all services
-
-```bash
-docker compose up --build
-```
-
-This single command will:
-- Start a **PostgreSQL 16** database
-- Build and start the **FastAPI backend** (auto-generates tables on startup)
-- Build and start the **Next.js frontend**
-
-### 3. Access the application
-
-| URL | Description |
-|-----|-------------|
-| http://localhost:3000 | **Frontend** — Dashboard, Books, Members |
-| http://localhost:8000/docs | **Swagger UI** — Interactive API documentation |
-| http://localhost:8000/redoc | **ReDoc** — Alternative API documentation |
-
-### 4. Seed sample data (optional)
-
-```bash
-docker compose exec backend python scripts/seed.py
-```
 
 ---
 
@@ -411,3 +319,81 @@ curl -X POST http://localhost:8000/api/v1/borrow/ \
 # Return a book
 curl -X POST http://localhost:8000/api/v1/borrow/1/return
 ```
+
+---
+
+## Requirements Coverage
+
+### Functional Requirements
+
+| # | Requirement | Implementation |
+|---|-------------|----------------|
+| 1 | **Track Books** (title, author, etc.) | `Book` model with title, author, ISBN, genre, publisher, copy counts |
+| 2 | **Track Members** (name, contact info, etc.) | `Member` model with name, email, phone, address, active status |
+| 3 | **Track Borrowing/Returning** (who, what, when) | `BorrowRecord` model with book FK, member FK, dates, status enum |
+| 4 | **Create/Update books and members** | Full CRUD endpoints for both (`POST`, `GET`, `PATCH`, `DELETE`) |
+| 5 | **Record when a member borrows a book** | `POST /api/v1/borrow/` with business rule validation |
+| 6 | **Record when a borrowed book is returned** | `POST /api/v1/borrow/{id}/return` updates status and restores copies |
+| 7 | **Query/list borrowed books** | Filter by member, book, status; dedicated `/borrow/member/{id}` endpoint |
+
+### Technical Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Python server** | FastAPI with async/await, Uvicorn |
+| **REST API** | RESTful endpoints with proper HTTP methods and status codes |
+| **PostgreSQL** | PostgreSQL 16 via Docker, Tortoise ORM (asyncpg driver) |
+| **Database schema design** | 3 normalized tables with foreign keys and indexes |
+| **Documentation / README** | This file — setup, run, test, and API reference |
+| **Docker setup** | Single `docker compose up --build` starts everything |
+| **Minimal Frontend (React/Next.js)** | Next.js App Router with Dashboard, Books, and Members pages |
+
+### Optional / Bonus Features
+
+| Feature | Details |
+|---------|---------|
+| **Overdue book handling** | Due dates tracked, `GET /borrow/overdue` endpoint, auto-marks OVERDUE status |
+| **Error handling** | Custom `BorrowError` exceptions, HTTP 4xx responses with clear messages |
+| **Input validation** | Pydantic schemas with `Field(...)` constraints (min/max length, email, etc.) |
+| **Cannot borrow already-checked-out book** | Duplicate active borrow prevention per member+book pair |
+| **Inactive member cannot borrow** | Business rule enforced in `BorrowService` |
+| **Borrow limit per member** | Max 10 simultaneous borrows per member |
+| **Copy tracking** | `available_copies` auto-decremented/incremented on borrow/return |
+| **Paginated results** | All list endpoints support `page` and `size` query params |
+| **Search** | Books searchable by title/author; Members searchable by name/email |
+| **Seed data script** | `scripts/seed.py` populates sample books and members |
+| **Automated tests** | Unit tests (3 files) + Integration tests (3 files) using pytest |
+| **Stats dashboard** | `GET /api/v1/stats/` returns aggregate library metrics |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | FastAPI + Uvicorn (async Python) |
+| ORM | Tortoise ORM (asyncpg) |
+| Database | PostgreSQL 16 |
+| Migrations | Aerich |
+| Frontend | Next.js 15 (App Router), React 19, TypeScript |
+| Containerization | Docker + Docker Compose |
+
+---
+
+## Screenshots
+
+![UI Gif](docs/library-1080.gif)
+
+Home
+![Home](docs/screenshots/dashboard.png)
+Books
+![books.png](docs/screenshots/books.png)
+Book Detail
+![book-detail.png](docs/screenshots/book-detail.png)
+Members
+![Members](docs/screenshots/members.png)
+Members Create
+![member-create.png](docs/screenshots/member-create.png)
+
+
+---
