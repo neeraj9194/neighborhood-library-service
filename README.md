@@ -8,48 +8,81 @@ A full-stack application for managing a neighborhood library's books, members, a
 
 ---
 
+## How to Run
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine
+
+### Steps
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd neighborhood-library-service
+
+# 2. Start all services (PostgreSQL + Backend + Frontend)
+docker compose up --build
+
+# 3. (Optional) Seed sample data in a separate terminal 
+# (Seeder will run automatically on first run)
+docker compose exec backend python -m scripts.seed
+```
+
+That's it! Once the containers are running:
+
+| URL | What you'll see |
+|-----|-----------------|
+| http://localhost:3000 | **Frontend** — Dashboard, Books, Members |
+| http://localhost:8000/docs | **Swagger UI** — Interactive API docs |
+
+To stop: `Ctrl+C` then `docker compose down`
+To reset everything (including DB data): `docker compose down -v`
+
+---
+
 ## Requirements Coverage
 
-### ✅ Functional Requirements
+### Functional Requirements
 
-| # | Requirement | Status | Implementation |
-|---|-------------|--------|----------------|
-| 1 | **Track Books** (title, author, etc.) | ✅ Done | `Book` model with title, author, ISBN, genre, publisher, copy counts |
-| 2 | **Track Members** (name, contact info, etc.) | ✅ Done | `Member` model with name, email, phone, address, active status |
-| 3 | **Track Borrowing/Returning** (who, what, when) | ✅ Done | `BorrowRecord` model with book FK, member FK, dates, status enum |
-| 4 | **Create/Update books and members** | ✅ Done | Full CRUD endpoints for both (`POST`, `GET`, `PATCH`, `DELETE`) |
-| 5 | **Record when a member borrows a book** | ✅ Done | `POST /api/v1/borrow/` with business rule validation |
-| 6 | **Record when a borrowed book is returned** | ✅ Done | `POST /api/v1/borrow/{id}/return` updates status and restores copies |
-| 7 | **Query/list borrowed books** | ✅ Done | Filter by member, book, status; dedicated `/borrow/member/{id}` endpoint |
+| # | Requirement | Implementation |
+|---|-------------|----------------|
+| 1 | **Track Books** (title, author, etc.) | `Book` model with title, author, ISBN, genre, publisher, copy counts |
+| 2 | **Track Members** (name, contact info, etc.) | `Member` model with name, email, phone, address, active status |
+| 3 | **Track Borrowing/Returning** (who, what, when) | `BorrowRecord` model with book FK, member FK, dates, status enum |
+| 4 | **Create/Update books and members** | Full CRUD endpoints for both (`POST`, `GET`, `PATCH`, `DELETE`) |
+| 5 | **Record when a member borrows a book** | `POST /api/v1/borrow/` with business rule validation |
+| 6 | **Record when a borrowed book is returned** | `POST /api/v1/borrow/{id}/return` updates status and restores copies |
+| 7 | **Query/list borrowed books** | Filter by member, book, status; dedicated `/borrow/member/{id}` endpoint |
 
-### ✅ Technical Requirements
+### Technical Requirements
 
-| Requirement | Status | Details |
-|-------------|--------|---------|
-| **Python server** | ✅ | FastAPI with async/await, Uvicorn |
-| **REST API** | ✅ | RESTful endpoints with proper HTTP methods and status codes |
-| **PostgreSQL** | ✅ | PostgreSQL 16 via Docker, Tortoise ORM (asyncpg driver) |
-| **Database schema design** | ✅ | 3 normalized tables with foreign keys and indexes |
-| **Documentation / README** | ✅ | This file — setup, run, test, and API reference |
-| **Docker setup** | ✅ | Single `docker compose up --build` starts everything |
-| **Minimal Frontend (React/Next.js)** | ✅ | Next.js App Router with Dashboard, Books, and Members pages |
+| Requirement | Details |
+|-------------|---------|
+| **Python server** | FastAPI with async/await, Uvicorn |
+| **REST API** | RESTful endpoints with proper HTTP methods and status codes |
+| **PostgreSQL** | PostgreSQL 16 via Docker, Tortoise ORM (asyncpg driver) |
+| **Database schema design** | 3 normalized tables with foreign keys and indexes |
+| **Documentation / README** | This file — setup, run, test, and API reference |
+| **Docker setup** | Single `docker compose up --build` starts everything |
+| **Minimal Frontend (React/Next.js)** | Next.js App Router with Dashboard, Books, and Members pages |
 
 ### ✅ Optional / Bonus Features
 
-| Feature | Status | Details |
-|---------|--------|---------|
-| **Overdue book handling** | ✅ | Due dates tracked, `GET /borrow/overdue` endpoint, auto-marks OVERDUE status |
-| **Error handling** | ✅ | Custom `BorrowError` exceptions, HTTP 4xx responses with clear messages |
-| **Input validation** | ✅ | Pydantic schemas with `Field(...)` constraints (min/max length, email, etc.) |
-| **Cannot borrow already-checked-out book** | ✅ | Duplicate active borrow prevention per member+book pair |
-| **Inactive member cannot borrow** | ✅ | Business rule enforced in `BorrowService` |
-| **Borrow limit per member** | ✅ | Max 10 simultaneous borrows per member |
-| **Copy tracking** | ✅ | `available_copies` auto-decremented/incremented on borrow/return |
-| **Paginated results** | ✅ | All list endpoints support `page` and `size` query params |
-| **Search** | ✅ | Books searchable by title/author; Members searchable by name/email |
-| **Seed data script** | ✅ | `scripts/seed.py` populates sample books and members |
-| **Automated tests** | ✅ | Unit tests (3 files) + Integration tests (3 files) using pytest |
-| **Stats dashboard** | ✅ | `GET /api/v1/stats/` returns aggregate library metrics |
+| Feature | Details |
+|---------|---------|
+| **Overdue book handling** | Due dates tracked, `GET /borrow/overdue` endpoint, auto-marks OVERDUE status |
+| **Error handling** | Custom `BorrowError` exceptions, HTTP 4xx responses with clear messages |
+| **Input validation** | Pydantic schemas with `Field(...)` constraints (min/max length, email, etc.) |
+| **Cannot borrow already-checked-out book** | Duplicate active borrow prevention per member+book pair |
+| **Inactive member cannot borrow** | Business rule enforced in `BorrowService` |
+| **Borrow limit per member** | Max 10 simultaneous borrows per member |
+| **Copy tracking** | `available_copies` auto-decremented/incremented on borrow/return |
+| **Paginated results** | All list endpoints support `page` and `size` query params |
+| **Search** | Books searchable by title/author; Members searchable by name/email |
+| **Seed data script** | `scripts/seed.py` populates sample books and members |
+| **Automated tests** | Unit tests (3 files) + Integration tests (3 files) using pytest |
+| **Stats dashboard** | `GET /api/v1/stats/` returns aggregate library metrics |
 
 ---
 
