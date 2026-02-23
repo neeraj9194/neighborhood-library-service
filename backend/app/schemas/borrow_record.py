@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class BorrowRequest(BaseModel):
     """Schema for borrowing a book."""
-    book_id: int = Field(..., description="ID of the book to borrow")
-    member_id: int = Field(..., description="ID of the member borrowing the book")
+    book_id: int = Field(..., ge=1, description="ID of the book to borrow")
+    member_id: int = Field(..., ge=1, description="ID of the member borrowing the book")
     borrow_days: int | None = Field(None, ge=1, le=90, description="Number of days to borrow (default: 14)")
 
 

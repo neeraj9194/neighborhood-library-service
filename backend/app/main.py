@@ -1,10 +1,13 @@
+import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import RegisterTortoise
 
 from app.core.config import get_settings
+from app.core.logging import setup_logging
 from app.database import TORTOISE_ORM
 from app.api.v1.routes.books import router as books_router
 from app.api.v1.routes.members import router as members_router
@@ -12,11 +15,19 @@ from app.api.v1.routes.borrow import router as borrow_router
 from app.api.v1.routes.stats import router as stats_router
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage Tortoise ORM lifecycle — connect on startup, disconnect on shutdown."""
+    setup_logging()
+    logger.info(
+        "Starting %s v%s (log_level=%s)",
+        settings.APP_NAME,
+        settings.APP_VERSION,
+        settings.LOG_LEVEL,
+    )
     async with RegisterTortoise(
         app,
         config=TORTOISE_ORM,
@@ -24,6 +35,7 @@ async def lifespan(app: FastAPI):
         add_exception_handlers=True,
     ):
         yield
+    logger.info("Shutting down %s", settings.APP_NAME)
 
 
 app = FastAPI(
@@ -61,6 +73,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log every request with method, path, status code, and duration."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s -> %d (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
 
 # Include routers
 app.include_router(books_router)

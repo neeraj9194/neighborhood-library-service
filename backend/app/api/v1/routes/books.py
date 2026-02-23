@@ -1,9 +1,14 @@
 """Books router — HTTP layer only. Delegates all logic to BookService."""
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from tortoise.exceptions import IntegrityError
 
 from app.api.v1.dependencies import get_book_service
 from app.schemas.book import BookCreate, BookUpdate, BookResponse, BookListResponse
-from app.services.book import BookService
+from app.services.book import BookService, BookDeleteError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/books", tags=["Books"])
 
@@ -17,10 +22,11 @@ async def create_book(
     try:
         book = await svc.create_book(data)
         return BookResponse.model_validate(book, from_attributes=True)
-    except Exception as e:
-        if "unique" in str(e).lower():
-            raise HTTPException(status_code=409, detail="A book with this ISBN already exists")
-        raise HTTPException(status_code=500, detail=f"Failed to create book: {e}")
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="A book with this ISBN already exists")
+    except Exception:
+        logger.exception("Unexpected error creating book")
+        raise HTTPException(status_code=500, detail="Failed to create book")
 
 
 @router.get("/", response_model=BookListResponse, summary="List all books")
@@ -72,5 +78,8 @@ async def delete_book(
     svc: BookService = Depends(get_book_service),
 ):
     """Delete a book from the library."""
-    if not await svc.delete_book(book_id):
-        raise HTTPException(status_code=404, detail="Book not found")
+    try:
+        if not await svc.delete_book(book_id):
+            raise HTTPException(status_code=404, detail="Book not found")
+    except BookDeleteError as e:
+        raise HTTPException(status_code=400, detail=e.message)
