@@ -1,9 +1,14 @@
 """Members router — HTTP layer only. Delegates all logic to MemberService."""
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from tortoise.exceptions import IntegrityError
 
 from app.api.v1.dependencies import get_member_service
 from app.schemas.member import MemberCreate, MemberUpdate, MemberResponse, MemberListResponse
 from app.services.member import MemberService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/members", tags=["Members"])
 
@@ -17,10 +22,11 @@ async def create_member(
     try:
         member = await svc.create_member(data)
         return MemberResponse.model_validate(member, from_attributes=True)
-    except Exception as e:
-        if "unique" in str(e).lower():
-            raise HTTPException(status_code=409, detail="A member with this email already exists")
-        raise HTTPException(status_code=500, detail=f"Failed to create member: {e}")
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="A member with this email already exists")
+    except Exception:
+        logger.exception("Unexpected error creating member")
+        raise HTTPException(status_code=500, detail="Failed to create member")
 
 
 @router.get("/", response_model=MemberListResponse, summary="List all members")

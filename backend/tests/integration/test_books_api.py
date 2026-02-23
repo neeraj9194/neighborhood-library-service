@@ -123,3 +123,41 @@ class TestDeleteBook:
     async def test_404_for_unknown_id(self, client):
         resp = await client.delete(f"{BASE}/99999")
         assert resp.status_code == 404
+
+    async def test_delete_book_with_active_borrow_returns_400(self, client):
+        """Cannot delete a book that is currently borrowed."""
+        book = (await client.post(BASE + "/", json=_book_payload())).json()
+        member = (
+            await client.post(
+                "/api/v1/members/",
+                json={"name": "Test Member", "email": "del@example.com"},
+            )
+        ).json()
+        await client.post(
+            "/api/v1/borrow/",
+            json={"book_id": book["id"], "member_id": member["id"]},
+        )
+        resp = await client.delete(f"{BASE}/{book['id']}")
+        assert resp.status_code == 400
+        assert "active borrow" in resp.json()["detail"].lower()
+
+
+# ── Input validation ─────────────────────────────────────────────────────────
+
+class TestBookValidation:
+    async def test_invalid_isbn_returns_422(self, client):
+        resp = await client.post(BASE + "/", json=_book_payload(isbn="BADISBN"))
+        assert resp.status_code == 422
+
+    async def test_valid_isbn13_accepted(self, client):
+        resp = await client.post(BASE + "/", json=_book_payload(isbn="978-0-13-468599-1"))
+        assert resp.status_code == 201
+
+    async def test_valid_isbn10_accepted(self, client):
+        resp = await client.post(BASE + "/", json=_book_payload(isbn="0-13-468599-X"))
+        assert resp.status_code == 201
+
+    async def test_title_whitespace_is_stripped(self, client):
+        resp = await client.post(BASE + "/", json=_book_payload(title="  Dune  "))
+        assert resp.status_code == 201
+        assert resp.json()["title"] == "Dune"

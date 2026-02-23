@@ -15,6 +15,15 @@ class BookRepository:
     async def get_by_id(self, book_id: int) -> Book | None:
         return await Book.get_or_none(id=book_id)
 
+    async def get_by_id_for_update(self, book_id: int) -> Book | None:
+        """Fetch a book with a row-level lock (SELECT ... FOR UPDATE).
+
+        Must be called inside a transaction. The lock is held until the
+        transaction commits or rolls back, preventing concurrent updates
+        to ``available_copies``.
+        """
+        return await Book.select_for_update().filter(id=book_id).first()
+
     async def get_all(
         self,
         page: int = 1,

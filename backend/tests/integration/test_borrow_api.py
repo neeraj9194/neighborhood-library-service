@@ -113,6 +113,23 @@ class TestBorrowBook:
         assert resp.status_code == 400
 
 
+    async def test_negative_book_id_returns_422(self, client):
+        member = await _create_member(client, email="neg@x.com")
+        resp = await client.post(
+            BORROW_BASE + "/",
+            json={"book_id": -1, "member_id": member["id"]},
+        )
+        assert resp.status_code == 422
+
+    async def test_zero_member_id_returns_422(self, client):
+        book = await _create_book(client)
+        resp = await client.post(
+            BORROW_BASE + "/",
+            json={"book_id": book["id"], "member_id": 0},
+        )
+        assert resp.status_code == 422
+
+
 # ── POST /borrow/{id}/return ──────────────────────────────────────────────────
 
 class TestReturnBook:
