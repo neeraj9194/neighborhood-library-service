@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import StatsCard from "@/components/StatsCard";
+import DataTable, { type Column } from "@/components/DataTable";
+import Toast from "@/components/Toast";
 import {
   fetchStats,
   fetchOverdue,
@@ -14,6 +16,7 @@ export default function DashboardPage() {
   const [overdue, setOverdue] = useState<BorrowRecord[]>([]);
   const [overdueTotal, setOverdueTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -25,9 +28,52 @@ export default function DashboardPage() {
         setOverdue(overdueData.items);
         setOverdueTotal(overdueData.total);
       })
-      .catch(console.error)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const overdueColumns: Column<BorrowRecord>[] = [
+    {
+      key: "book_title",
+      header: "Book",
+      className: "font-semibold",
+      render: (r) => r.book_title || `Book #${r.book_id}`,
+    },
+    {
+      key: "member_name",
+      header: "Member",
+      render: (r) => r.member_name || `Member #${r.member_id}`,
+    },
+    {
+      key: "borrowed_at",
+      header: "Borrowed",
+      className: "text-secondary",
+      render: (r) => new Date(r.borrowed_at).toLocaleDateString(),
+    },
+    {
+      key: "due_date",
+      header: "Due Date",
+      className: "text-danger",
+      render: (r) => new Date(r.due_date).toLocaleDateString(),
+    },
+    {
+      key: "days_overdue",
+      header: "Days Overdue",
+      render: (r) => {
+        const days = Math.floor(
+          (Date.now() - new Date(r.due_date).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return (
+          <span className="badge inactive">
+            <span className="badge-dot" />
+            {days} day{days !== 1 ? "s" : ""}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <>
@@ -42,6 +88,8 @@ export default function DashboardPage() {
             <div key={i} className="loading-skeleton" style={{ height: 140 }} />
           ))}
         </div>
+      ) : error ? (
+        <div className="inline-alert error">{error}</div>
       ) : stats ? (
         <div>
           <div className="dashboard-section">
@@ -65,54 +113,23 @@ export default function DashboardPage() {
           <div className="dashboard-section">
             <h3 className="section-title">⏰ Overdue Books ({overdueTotal})</h3>
             {overdue.length === 0 ? (
-              <p style={{ color: "var(--text-muted)", padding: "16px 0" }}>
+              <p className="empty-state">
                 No overdue books — everything is on time! 🎉
               </p>
             ) : (
-              <div className="data-table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Book</th>
-                      <th>Member</th>
-                      <th>Borrowed</th>
-                      <th>Due Date</th>
-                      <th>Days Overdue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overdue.map((r) => {
-                      const daysOverdue = Math.floor(
-                        (Date.now() - new Date(r.due_date).getTime()) / (1000 * 60 * 60 * 24)
-                      );
-                      return (
-                        <tr key={r.id}>
-                          <td style={{ fontWeight: 600 }}>{r.book_title || `Book #${r.book_id}`}</td>
-                          <td>{r.member_name || `Member #${r.member_id}`}</td>
-                          <td style={{ color: "var(--text-secondary)" }}>
-                            {new Date(r.borrowed_at).toLocaleDateString()}
-                          </td>
-                          <td style={{ color: "var(--danger)" }}>
-                            {new Date(r.due_date).toLocaleDateString()}
-                          </td>
-                          <td>
-                            <span className="badge inactive">
-                              <span className="badge-dot" />
-                              {daysOverdue} day{daysOverdue !== 1 ? "s" : ""}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={overdueColumns}
+                data={overdue}
+                rowKey={(r) => r.id}
+              />
             )}
           </div>
         </div>
       ) : (
-        <p style={{ color: "var(--text-muted)" }}>Failed to load stats.</p>
+        <p className="text-muted">Failed to load stats.</p>
       )}
+
+      {error && <Toast type="error" message={error} />}
     </>
   );
 }
