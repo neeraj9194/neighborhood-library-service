@@ -63,6 +63,14 @@ a {
   text-decoration: none;
 }
 
+/* ── Utility Classes ───────────────────────────────────────────────── */
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
 /* ── Layout ─────────────────────────────────────────────────────────── */
 .app-layout {
   display: flex;
@@ -176,6 +184,17 @@ a {
 .page-header p {
   color: var(--text-secondary);
   font-size: 15px;
+}
+
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* ── Dashboard Section ──────────────────────────────────────────────── */
+.dashboard-section {
+  margin-bottom: 8px;
 }
 
 /* ── Stats Cards ────────────────────────────────────────────────────── */
@@ -425,6 +444,27 @@ a {
   background: var(--bg-card-hover);
 }
 
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.btn-warning:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.btn-warning:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Book Detail ────────────────────────────────────────────────────── */
 .book-detail {
   display: grid;
@@ -441,6 +481,13 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 32px;
+}
+
+.book-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
 }
 
 .book-detail-main h2 {
@@ -481,6 +528,13 @@ a {
   color: var(--text-primary);
   font-weight: 500;
 }
+
+.book-detail-field .copies-available {
+  font-weight: 700;
+}
+
+.book-detail-field .copies-available.has-copies { color: var(--success); }
+.book-detail-field .copies-available.no-copies { color: var(--danger); }
 
 /* Borrow sidebar */
 .borrow-panel {
@@ -559,6 +613,11 @@ a {
   border-color: var(--accent);
 }
 
+.form-group .field-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
 .borrow-result {
   padding: 12px 16px;
   border-radius: var(--radius-sm);
@@ -622,6 +681,13 @@ a {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── Empty State ───────────────────────────────────────────────────── */
+.empty-state {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px 0;
 }
 
 /* ── Back Link ──────────────────────────────────────────────────────── */
@@ -737,6 +803,13 @@ a {
   font-size: 13px;
 }
 
+/* ── Actions Cell ──────────────────────────────────────────────────── */
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* ── Modal ──────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
@@ -784,6 +857,13 @@ a {
   margin-top: 24px;
 }
 
+/* ── Confirm Dialog ────────────────────────────────────────────────── */
+.confirm-dialog-message {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
 /* ── Toast / Alert ─────────────────────────────────────────────────── */
 .toast {
   position: fixed;
@@ -807,6 +887,49 @@ a {
   background: rgba(239, 68, 68, 0.15);
   color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ── Error Boundary ────────────────────────────────────────────────── */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  text-align: center;
+  padding: 40px;
+}
+
+.error-boundary-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.error-boundary h2 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.error-boundary-message {
+  color: var(--text-secondary);
+  font-size: 15px;
+  max-width: 400px;
+}
+
+/* ── Inline Alert ──────────────────────────────────────────────────── */
+.inline-alert {
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.inline-alert.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────── */

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Neighborhood Library",
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body>
         <div className="app-layout">
           <Sidebar />
-          <main className="main-content">{children}</main>
+          <main className="main-content">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
         </div>
       </body>
     </html>

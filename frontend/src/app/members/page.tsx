@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import DataTable, { type Column } from "@/components/DataTable";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import Toast from "@/components/Toast";
 import {
   fetchMembers,
   createMember,
+  updateMember,
   deactivateMember,
   type Member,
 } from "@/lib/api";
@@ -14,32 +18,51 @@ export default function MembersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const size = 20;
 
-  // Modal state
-  const [showModal, setShowModal] = useState(false);
+  /* ── Register Modal ────────────────────────────────────────────────── */
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Toast state
+  /* ── Edit Modal ────────────────────────────────────────────────────── */
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editMember, setEditMember] = useState<Member | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  /* ── Confirm Deactivation ──────────────────────────────────────────── */
+  const [confirmDeactivate, setConfirmDeactivate] = useState<Member | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+
+  /* ── Toast ─────────────────────────────────────────────────────────── */
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
   };
 
+  /* ── Data Loading ──────────────────────────────────────────────────── */
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetchMembers({ page, size, search: search || undefined });
       setMembers(res.items);
       setTotal(res.total);
     } catch (err) {
-      console.error(err);
+      const msg = err instanceof Error ? err.message : "Failed to load members";
+      setError(msg);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -61,23 +84,38 @@ export default function MembersPage() {
 
   const totalPages = Math.ceil(total / size);
 
+  /* ── Register Form ─────────────────────────────────────────────────── */
+  const resetRegisterForm = () => {
+    setFormName("");
+    setFormEmail("");
+    setFormPhone("");
+    setFormAddress("");
+    setFormErrors({});
+  };
+
+  const validateRegister = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!formName.trim()) errors.name = "Name is required";
+    if (!formEmail.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail.trim())) errors.email = "Invalid email address";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formEmail) return;
+    if (!validateRegister()) return;
     setSubmitting(true);
     try {
       await createMember({
-        name: formName,
-        email: formEmail,
-        phone: formPhone || undefined,
-        address: formAddress || undefined,
+        name: formName.trim(),
+        email: formEmail.trim(),
+        phone: formPhone.trim() || undefined,
+        address: formAddress.trim() || undefined,
       });
-      showToast("success", `Member "${formName}" registered successfully!`);
-      setShowModal(false);
-      setFormName("");
-      setFormEmail("");
-      setFormPhone("");
-      setFormAddress("");
+      showToast("success", `Member "${formName.trim()}" registered successfully!`);
+      setShowRegisterModal(false);
+      resetRegisterForm();
       load();
     } catch (err: unknown) {
       showToast("error", err instanceof Error ? err.message : "Registration failed");
@@ -86,25 +124,136 @@ export default function MembersPage() {
     }
   };
 
-  const handleDeactivate = async (member: Member) => {
-    if (!confirm(`Deactivate "${member.name}"? They will no longer be able to borrow books.`)) return;
+  /* ── Edit Form ─────────────────────────────────────────────────────── */
+  const openEditModal = (member: Member) => {
+    setEditMember(member);
+    setEditName(member.name);
+    setEditEmail(member.email);
+    setEditPhone(member.phone || "");
+    setEditAddress(member.address || "");
+    setEditErrors({});
+    setShowEditModal(true);
+  };
+
+  const validateEdit = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!editName.trim()) errors.name = "Name is required";
+    if (!editEmail.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())) errors.email = "Invalid email address";
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editMember || !validateEdit()) return;
+    setEditSubmitting(true);
     try {
-      await deactivateMember(member.id);
-      showToast("success", `"${member.name}" has been deactivated.`);
+      await updateMember(editMember.id, {
+        name: editName.trim(),
+        email: editEmail.trim(),
+        phone: editPhone.trim() || null,
+        address: editAddress.trim() || null,
+      });
+      showToast("success", `Member "${editName.trim()}" updated successfully!`);
+      setShowEditModal(false);
       load();
     } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Deactivation failed");
+      showToast("error", err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
+  /* ── Deactivate ────────────────────────────────────────────────────── */
+  const handleDeactivate = async () => {
+    if (!confirmDeactivate) return;
+    setDeactivating(true);
+    try {
+      await deactivateMember(confirmDeactivate.id);
+      showToast("success", `"${confirmDeactivate.name}" has been deactivated.`);
+      load();
+    } catch (err: unknown) {
+      showToast("error", err instanceof Error ? err.message : "Deactivation failed");
+    } finally {
+      setDeactivating(false);
+      setConfirmDeactivate(null);
+    }
+  };
+
+  /* ── DataTable Columns ────────────────────────────────────────────── */
+  const columns: Column<Member>[] = [
+    {
+      key: "id",
+      header: "ID",
+      className: "text-muted",
+      render: (m) => `#${m.id}`,
+    },
+    {
+      key: "name",
+      header: "Member",
+      className: "font-semibold",
+    },
+    {
+      key: "email",
+      header: "Email",
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      className: "text-secondary",
+      render: (m) => m.phone || "—",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (m) => (
+        <span className={`badge ${m.is_active ? "active" : "inactive"}`}>
+          <span className="badge-dot" />
+          {m.is_active ? "Active" : "Inactive"}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Joined",
+      className: "text-secondary",
+      render: (m) => new Date(m.created_at).toLocaleDateString(),
+    },
+    {
+      key: "actions",
+      header: "Action",
+      render: (m) => (
+        <div className="actions-cell">
+          {m.is_active && (
+            <>
+              <button
+                className="btn btn-warning btn-sm"
+                onClick={() => openEditModal(m)}
+              >
+                Edit
+              </button>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => setConfirmDeactivate(m)}
+              >
+                Deactivate
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="page-header page-header-row">
         <div>
           <h2>Members</h2>
           <p>Manage library members and registrations</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={() => setShowRegisterModal(true)}>
           + Register Member
         </button>
       </div>
@@ -125,59 +274,25 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {error && !loading && (
+        <div className="inline-alert error">{error}</div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="loading-skeleton" style={{ height: 400 }} />
-      ) : members.length === 0 ? (
-        <p style={{ color: "var(--text-muted)", textAlign: "center", padding: 40 }}>
+      ) : members.length === 0 && !error ? (
+        <p className="empty-state">
           No members found{search ? ` matching "${search}"` : ""}.
         </p>
       ) : (
         <>
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Member</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Joined</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id}>
-                    <td style={{ color: "var(--text-muted)" }}>#{m.id}</td>
-                    <td style={{ fontWeight: 600 }}>{m.name}</td>
-                    <td>{m.email}</td>
-                    <td style={{ color: "var(--text-secondary)" }}>{m.phone || "—"}</td>
-                    <td>
-                      <span className={`badge ${m.is_active ? "active" : "inactive"}`}>
-                        <span className="badge-dot" />
-                        {m.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>
-                      {new Date(m.created_at).toLocaleDateString()}
-                    </td>
-                    <td>
-                      {m.is_active && (
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDeactivate(m)}
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={members}
+            rowKey={(m) => m.id}
+            emptyMessage={`No members found${search ? ` matching "${search}"` : ""}.`}
+          />
 
           {totalPages > 1 && (
             <div className="pagination">
@@ -196,8 +311,8 @@ export default function MembersPage() {
       )}
 
       {/* Register Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+      {showRegisterModal && (
+        <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Register New Member</h3>
             <form onSubmit={handleRegister}>
@@ -207,22 +322,22 @@ export default function MembersPage() {
                   <input
                     id="reg-name"
                     type="text"
-                    required
                     placeholder="John Doe"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                   />
+                  {formErrors.name && <span className="field-error">{formErrors.name}</span>}
                 </div>
                 <div className="form-group">
                   <label htmlFor="reg-email">Email Address *</label>
                   <input
                     id="reg-email"
                     type="email"
-                    required
                     placeholder="john@example.com"
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
                   />
+                  {formErrors.email && <span className="field-error">{formErrors.email}</span>}
                 </div>
                 <div className="form-group">
                   <label htmlFor="reg-phone">Phone</label>
@@ -246,10 +361,10 @@ export default function MembersPage() {
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowRegisterModal(false); resetRegisterForm(); }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={submitting || !formName || !formEmail}>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? "Registering..." : "Register"}
                 </button>
               </div>
@@ -258,10 +373,79 @@ export default function MembersPage() {
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className={`toast ${toast.type}`}>{toast.message}</div>
+      {/* Edit Modal */}
+      {showEditModal && editMember && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Member</h3>
+            <form onSubmit={handleEdit}>
+              <div className="borrow-form">
+                <div className="form-group">
+                  <label htmlFor="edit-name">Full Name *</label>
+                  <input
+                    id="edit-name"
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                  {editErrors.name && <span className="field-error">{editErrors.name}</span>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-email">Email Address *</label>
+                  <input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                  />
+                  {editErrors.email && <span className="field-error">{editErrors.email}</span>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-phone">Phone</label>
+                  <input
+                    id="edit-phone"
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-address">Address</label>
+                  <input
+                    id="edit-address"
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
+
+      {/* Deactivate Confirmation */}
+      {confirmDeactivate && (
+        <ConfirmDialog
+          title="Deactivate Member"
+          message={`Deactivate "${confirmDeactivate.name}"? They will no longer be able to borrow books.`}
+          confirmLabel="Deactivate"
+          variant="danger"
+          loading={deactivating}
+          onConfirm={handleDeactivate}
+          onCancel={() => setConfirmDeactivate(null)}
+        />
+      )}
+
+      {toast && <Toast type={toast.type} message={toast.message} />}
     </>
   );
 }
